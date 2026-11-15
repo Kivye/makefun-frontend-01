@@ -1,18 +1,22 @@
-export const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
-export const money = value => new Intl.NumberFormat('en-US', { style:'currency', currency:'USD', minimumFractionDigits: Number(value) % 1 ? 2 : 0, maximumFractionDigits:2 }).format(Number(value) || 0);
-export const number = value => new Intl.NumberFormat('en-US', { maximumFractionDigits:6 }).format(Number(value) || 0);
-export const date = value => value && Number.isFinite(Date.parse(value)) ? new Intl.DateTimeFormat('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', timeZone:'UTC' }).format(new Date(value)) + ' UTC' : 'Not announced';
-export const accepting = bounty => Date.parse(bounty.deadline) > Date.now() && !['closed','resolved'].includes(bounty.status);
-export function remaining(value) {
-  const m = Math.ceil((Date.parse(value) - Date.now()) / 60000);
-  if (!Number.isFinite(m)) return 'No deadline';
-  if (m <= 0) return 'Ended';
-  return m >= 1440 ? `${Math.floor(m / 1440)}d ${Math.floor(m % 1440 / 60)}h left` : `${Math.floor(m / 60)}h ${m % 60}m left`;
+// Feature: API-safe text, money, deadline and status formatting.
+export const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+export const num=v=>v==null?'—':Number(v).toLocaleString('en-US',{maximumFractionDigits:2});
+export const money=v=>v==null||v===''?'—':Number(v).toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2});
+export const date=v=>!v||!Number.isFinite(Date.parse(v))?'Not announced':new Date(v).toLocaleString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'UTC'})+' UTC';
+export const shortDate=v=>{const t=typeof v==='number'?v:Date.parse(v);return!Number.isFinite(t)?'—':new Date(t).toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'UTC'});};
+export function remaining(v,now=Date.now()){
+ const m=Math.ceil((Date.parse(v)-now)/60000);
+ return !Number.isFinite(m)?'No deadline':m<=0?'Ended':m>=1440?`${Math.floor(m/1440)}d ${Math.floor(m%1440/60)}h`:`${Math.floor(m/60)}h ${m%60}m`;
 }
-export const bountyURL = slug => '#/bounty/' + encodeURIComponent(slug);
-export const profileURL = handle => '#/profile/' + encodeURIComponent(handle);
-export const safeURL = value => { if (!value) return ''; try { const u = new URL(value, 'https://make.fun'); return u.protocol === 'https:' ? esc(u.href) : ''; } catch { return ''; } };
-export function prose(value) {
-  const source = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
-  return esc(source || '').split(/\n\n+/).map(block => /^#{1,4} /.test(block) ? '<h3>' + block.replace(/^#{1,4} /, '') + '</h3>' : '<p>' + block.replace(/\n/g, '<br>') + '</p>').join('');
+export const accepting=b=>b?.acceptingSubmissions===true||b?.acceptingSubmissions==null&&Date.parse(b?.deadline)>Date.now()&&!['closed','resolved','paid'].includes(String(b?.status).toLowerCase());
+export function statusOf(b,now=Date.now()){
+ const s=String(b?.status||'').toLowerCase(),h=(Date.parse(b?.deadline)-now)/36e5;
+ if(b?.walletPaid||Number(b?.prizesPaid)>0||s==='paid')return['PAID','paid'];
+ if(['judging','judged','resolving','resolved'].includes(s)||h<=0&&!accepting(b))return['JUDGING','judging'];
+ if(accepting(b)&&h<48)return['CLOSING SOON',h<24?'urgent':'soon'];
+ return accepting(b)?['OPEN','open']:[s.toUpperCase()||'CLOSED','judging'];
 }
+export const bountyURL=s=>'#/bounty/'+encodeURIComponent(s||'');
+export const profileURL=h=>'#/profile/'+encodeURIComponent(h||'');
+export async function gzipLength(bytes){return(await new Response(new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer()).byteLength;}
+export const shortBytes=n=>n<1024?`${n} B`:`${(n/1024).toFixed(1)} KB`;

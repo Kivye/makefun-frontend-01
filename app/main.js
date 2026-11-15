@@ -1,89 +1,161 @@
+// Feature: client router, live API state, measured first-load weight and local board controls.
 import { boardAPI, bountyAPI, leaderboardAPI, profileAPI } from './api.js';
-import { boardView, boardRows, bountyView, leaderboardView, profileView, solutionRows } from './views.js';
-import { esc, accepting, remaining, bountyURL } from './format.js';
-const main = document.querySelector('main');
-let generation = 0;
-let boardState = { items: [], next_cursor: null };
-let filterState = { text: '', category: '', open: false };
-let activeSurface = '';
+import { boardView, boardRows, sortBoardItems } from './views.js';
+import { esc, statusOf, remaining, gzipLength, shortBytes, bountyURL } from './format.js';
+
+const main = document.querySelector('#content');
+const assets = ['index.html','style.css','main.js','views.js','api.js','format.js'];
+let board = { items:[] };
+let query = '';
+let category = '';
+let statusFilter = 'all';
+let routeGeneration = 0;
+let updatedAt;
+
+async function measureFirstLoad() {
+  try {
+    const files = [...assets];
+    if (window.matchMedia('(max-width:900px)').matches) files.push('mobile.css');
+    const sizes = await Promise.all(files.map(async file => {
+      const response = await fetch(file, { cache:'no-store' });
+      if (!response.ok) throw new Error(`Cannot measure ${file}`);
+      const bytes = await response.arrayBuffer();
+      return gzipLength(bytes);
+    }));
+    return { gzip:sizes.reduce((n,x)=>n+x,0) };
+  } catch { return null; }
+}
+let detailViews;
+let detailStyles;
+let mobileStyles;
+function loadMobileStyles() {
+  if (!window.matchMedia('(max-width:900px)').matches || mobileStyles) return mobileStyles || Promise.resolve();
+  mobileStyles = new Promise((resolve,reject) => {
+    const link=document.createElement('link'); link.rel='stylesheet'; link.href='mobile.css';
+    link.onload=resolve; link.onerror=()=>reject(new Error('Could not load mobile styles.'));
+    document.head.append(link);
+  });
+  return mobileStyles;
+}
+async function loadDetailSurface() {
+  if (!detailStyles) detailStyles = new Promise((resolve,reject) => {
+    const link=document.createElement('link'); link.rel='stylesheet'; link.href='detail.css';
+    link.onload=resolve; link.onerror=()=>reject(new Error('Could not load detail styles.'));
+    document.head.append(link);
+  });
+  if (!detailViews) detailViews = import('./detail.js');
+  await Promise.all([detailStyles,detailViews]);
+  return detailViews;
+}
+function setMeta(measurement) {
+  const weight = measurement ? `${shortBytes(measurement.gzip)} gzip` : 'gzip size unavailable';
+  document.querySelector('#load-chip').textContent = `${weight} · FIRST LOAD`;
+  document.querySelector('#footer-size').textContent = `First load ${measurement?shortBytes(measurement.gzip)+' gzip':'unavailable'}`;
+  document.querySelector('#footer-count').textContent = `Bounties ${board.items.length} loaded`;
+  document.querySelector('#footer-updated').textContent = `Updated ${new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'UTC'}).format(updatedAt)} UTC`;
+}
+function filteredItems() {
+  const now = Date.now();
+  const items = board.items.filter(b => {
+    const text = `${b.title||''} ${b.category||''} ${(b.skills||[]).join(' ')}`.toLowerCase();
+    const [label] = statusOf(b,now);
+    const statusOK = statusFilter==='all' || statusFilter==='open' && label==='OPEN' || statusFilter==='soon' && label==='CLOSING SOON' || statusFilter==='paid' && label==='PAID';
+    return (!query || text.includes(query)) && (!category || b.category===category) && statusOK;
+  });
+  return sortBoardItems(items,now);
+}
 function renderBoardRows() {
-  const items = boardState.items.filter(b => (!filterState.text || (b.title + ' ' + b.category + ' ' + (b.skills || []).join(' ')).toLowerCase().includes(filterState.text)) && (!filterState.category || b.category === filterState.category) && (!filterState.open || accepting(b))).sort((a,b) => Number(accepting(b))-Number(accepting(a)) || (accepting(a) ? Date.parse(a.deadline)-Date.parse(b.deadline) : Date.parse(b.deadline)-Date.parse(a.deadline)));
-  document.querySelector('#board-list').innerHTML = boardRows(items);
-  document.querySelector('#result-count').textContent = `Showing ${items.length} of ${boardState.items.length} bounties`;
+  const list = document.querySelector('#board-list');
+  if (!list) return;
+  const items = filteredItems();
+  list.innerHTML = boardRows(items);
+  document.querySelector('#result-count').textContent = `Showing ${items.length} of ${board.items.length} API results`;
 }
 function bindBoard() {
-  const search = document.querySelector('#search'), category = document.querySelector('#category'), open = document.querySelector('#open-only');
-  search.value = filterState.text; category.value = filterState.category; open.checked = filterState.open;
-  search.oninput = () => { filterState.text = search.value.toLowerCase(); renderBoardRows(); };
-  category.onchange = () => { filterState.category = category.value; renderBoardRows(); };
-  open.onchange = () => { filterState.open = open.checked; renderBoardRows(); };
-  document.querySelector('#load-more').onclick = async event => {
-    const token = generation, button = event.currentTarget;
-    button.disabled = true; button.textContent = 'Loading…';
-    try {
-      const next = await boardAPI(boardState.next_cursor);
-      if (token !== generation) return;
-      const known = new Set(boardState.items.map(b=>b.slug));
-      boardState.items.push(...next.items.filter(b=>!known.has(b.slug))); boardState.next_cursor = next.next_cursor;
-      button.hidden = !next.next_cursor; renderBoardRows();
-    } catch { if (token === generation) document.querySelector('#result-count').textContent = 'Could not load more. Try again.'; }
-    finally { button.disabled = false; button.textContent = 'Load more bounties ↓'; }
-  };
+  const search = document.querySelector('#search');
+  const select = document.querySelector('#category');
+  search.value = query; select.value = category;
+  search.oninput = () => { query=search.value.toLowerCase().trim(); renderBoardRows(); };
+  select.onchange = () => { category=select.value; renderBoardRows(); };
+  document.querySelectorAll('.filter-pill').forEach(button => {
+    button.setAttribute('aria-pressed',String(button.dataset.filter===statusFilter));
+    button.onclick = () => { statusFilter=button.dataset.filter; document.querySelectorAll('.filter-pill').forEach(x=>x.setAttribute('aria-pressed',String(x===button))); renderBoardRows(); };
+  });
   renderBoardRows();
 }
-export async function route(refresh = false) {
-  const token = ++generation;
-  window.__shotReady = false;
+function routeParts() {
+  const raw=location.hash.slice(1)||'/';
+  const [path,qs='']=raw.split('?');
+  const parts=path.split('/').filter(Boolean).map(s=>{try{return decodeURIComponent(s)}catch{return s}});
+  return {parts,params:new URLSearchParams(qs)};
+}
+async function leaderboardRecords(entries) {
+  const handles=[...new Set(entries.slice(0,10).map(x=>x.handle).filter(Boolean))];
+  const pairs=await Promise.all(handles.map(async h=>[h,await profileAPI(h).catch(()=>null)]));
+  return Object.fromEntries(pairs.filter(([,p])=>p));
+}
+export async function route() {
+  const token=++routeGeneration;
+  window.__shotReady=false;
   main.setAttribute('aria-busy','true');
-  const raw = location.hash.slice(1) || '/';
-  const [path, query = ''] = raw.split('?');
-  const parts = path.split('/').filter(Boolean).map(p => { try { return decodeURIComponent(p); } catch { return p; } });
-  const params = new URLSearchParams(query);
-  if (!refresh) main.innerHTML = '<section class="loading" role="status"><span class="loader"></span><h1>Opening the desk…</h1><p>Fetching the latest public data.</p></section>';
+  const {parts,params}=routeParts();
+  main.innerHTML='<section class="loading"><span class="loader"></span><p>Reading live public data…</p></section>';
   try {
-    let html, title;
-    if (!parts.length) {
-      boardState = await boardAPI(); html = boardView(boardState); title = 'Bounties'; activeSurface = 'board';
-    } else if (parts[0] === 'bounty' && parts[1]) {
-      const bounty = await bountyAPI(parts[1]);
-      if (parts[2] === 'leaderboard') {
-        const phase = params.get('phase') === 'final' ? 'final' : 'dev';
-        const view = ['overall','performance','cost','efficiency'].includes(params.get('view')) ? params.get('view') : 'overall';
-        const lb = await leaderboardAPI(parts[1],phase,view);
-        html = leaderboardView(bounty,lb,phase,view); activeSurface = 'leaderboard';
-      } else { html = bountyView(bounty); activeSurface = 'bounty'; }
-      title = bounty.title + (parts[2] === 'leaderboard' ? ' · Rankings' : '');
-    } else if (parts[0] === 'profile' && parts[1]) {
-      const profile = await profileAPI(parts[1]);
-      html = profileView(profile); title = '@' + profile.handle; activeSurface = 'profile';
-      if (token !== generation) return;
-      main.innerHTML = html;
-      let shown = 10;
-      const update = () => { document.querySelector('#solutions').innerHTML = solutionRows((profile.solutions || []).slice(0,shown)); document.querySelector('#more-solutions').hidden = shown >= (profile.solutions || []).length; };
-      document.querySelector('#more-solutions').onclick = () => { shown += 10; update(); }; update();
-    } else { throw new Error('This page could not be found.'); }
-    if (token !== generation) return;
-    if (activeSurface !== 'profile') main.innerHTML = html;
-    if (activeSurface === 'board') bindBoard();
-    if (activeSurface === 'leaderboard') {
-      const change = () => { location.hash = bountyURL(parts[1]) + '/leaderboard?phase=' + document.querySelector('#phase').value + '&view=' + document.querySelector('#rank-view').value; };
-      document.querySelector('#phase').onchange = change; document.querySelector('#rank-view').onchange = change;
+    await loadMobileStyles();
+    const [listing,measurement]=await Promise.all([boardAPI(),measureFirstLoad()]);
+    board=listing; updatedAt??=Date.now();
+    if (token!==routeGeneration) return;
+    setMeta(measurement);
+    let surface='board', title='Bounties';
+    if (parts[0]==='bounty'&&parts[1]) {
+      const bounty=await bountyAPI(parts[1]);
+      if (token!==routeGeneration) return;
+      const detail=await loadDetailSurface();
+      setMeta(measurement);
+      title=bounty.title||parts[1];
+      if (parts[2]==='leaderboard') {
+        const phase=params.get('phase')||'dev', view=params.get('view')||'performance';
+        const lb=await leaderboardAPI(parts[1],phase,view);
+        if (token!==routeGeneration) return;
+        const records=await leaderboardRecords(lb.entries||[]);
+        if (token!==routeGeneration) return;
+        main.innerHTML=detail.leaderboardView(bounty,lb,phase,view,records); surface='leaderboard'; title+=' · Leaderboard';
+      } else { main.innerHTML=detail.bountyView(bounty); surface='bounty'; }
+    } else if (parts[0]==='profile'&&parts[1]) {
+      const profile=await profileAPI(parts[1]);
+      if (token!==routeGeneration) return;
+      const detail=await loadDetailSurface();
+      setMeta(measurement);
+      main.innerHTML=detail.profileView(profile);
+      const target=document.querySelector('#solutions'); let shown=8;
+      const update=()=>{target.innerHTML=detail.solutionRows((profile.solutions||[]).slice(0,shown));document.querySelector('#more-solutions').hidden=shown>=(profile.solutions||[]).length;};
+      document.querySelector('#more-solutions').onclick=()=>{shown+=8;update();}; update();
+      surface='profile'; title='@'+profile.handle;
+    } else if (parts.length) {
+      throw new Error('That public page was not found.');
+    } else {
+      main.innerHTML=boardView(board); surface='board';
+      bindBoard();
     }
-    main.dataset.surface = activeSurface;
-    document.title = title + ' · make.fun Bounty desk';
-    document.querySelector('#nav-board').toggleAttribute('aria-current', activeSurface === 'board');
-    document.querySelector('#freshness').textContent = 'Checked ' + new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'UTC'}) + ' UTC · Read only';
-    main.setAttribute('aria-busy','false'); window.__shotReady = true;
-    if (!refresh) { window.scrollTo(0,0); main.focus({preventScroll:true}); }
+    if (token!==routeGeneration) return;
+    main.dataset.surface=surface;
+    document.title=`${title} · make.fun Bounty timetable`;
+    document.querySelector('#nav-board').toggleAttribute('aria-current',surface==='board');
+    if (surface==='leaderboard') {
+      const change=()=>{location.hash=`${bountyURL(parts[1])}/leaderboard?phase=${encodeURIComponent(document.querySelector('#phase').value)}&view=${encodeURIComponent(document.querySelector('#rank-view').value)}`;};
+      document.querySelector('#phase').onchange=change; document.querySelector('#rank-view').onchange=change;
+    }
+    main.setAttribute('aria-busy','false');
+    window.__shotReady=true;
   } catch (error) {
-    if (token !== generation) return;
-    main.innerHTML = `<section class="empty error"><p class="eyebrow">CONNECTION PAUSED</p><h1>Let's try that again.</h1><p>${esc(error.message)}</p><p>The desk needs a connection to make.fun's public API.</p><button id="retry">Retry loading ↗</button> <a href="#/">Back to bounties</a></section>`;
-    main.setAttribute('aria-busy','false'); document.querySelector('#retry').onclick = () => route();
-    document.querySelector('#freshness').textContent = 'Unable to refresh · Data not loaded';
+    if (token!==routeGeneration) return;
+    main.innerHTML=`<section class="error-state"><p class="eyebrow">LIVE DATA UNAVAILABLE</p><h1>Could not load the public API.</h1><p>${esc(error.message)}</p><button id="retry">Retry ↻</button></section>`;
+    main.setAttribute('aria-busy','false'); document.querySelector('#retry').onclick=route;
+    document.querySelector('#footer-updated').textContent='Updated unavailable';
   }
 }
-window.addEventListener('hashchange',()=>route());
-window.addEventListener('online',()=>route(true));
-setInterval(() => { if (!document.hidden && !main.contains(document.activeElement?.closest('input,select,button,details')) && main.getAttribute('aria-busy') !== 'true') route(true); },60000);
-setInterval(() => { document.querySelectorAll('[data-deadline]').forEach(el=>el.textContent=remaining(el.dataset.deadline)); },15000);
+window.addEventListener('hashchange',route);
+window.addEventListener('online',route);
+window.addEventListener('resize',()=>loadMobileStyles().then(measureFirstLoad).then(setMeta));
+setInterval(()=>document.querySelectorAll('[data-deadline]').forEach(el=>el.textContent=remaining(el.dataset.deadline)),15000);
 route();

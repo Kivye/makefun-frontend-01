@@ -1,24 +1,27 @@
-# Build verification
+# Build Status · v3
 
-Completed the four-surface vanilla frontend and live capture workflow. No fee payment or submission was initiated in this continuation.
+The v3 rewrite restores `app/` as the only frontend tree. The duplicate `src/` tree and `tools/build.mjs` are removed. The public explorer has four routes: the timetable, bounty detail, competition leaderboard and builder profile. This session did not make another fee payment or submit an entry.
 
-## Final live screenshots
+## Live Captures
 
-Captured directly from the app served on 127.0.0.1:8081 through the local forward proxy on port 18080. Chromium loaded the public make.fun API itself; there was no response interception, fixture injection, or image editing. Every final API response was HTTP 200. All three images were opened and visually inspected after the final capture.
+`tools/shoot.mjs` served the app on `127.0.0.1:8081` and used the loopback forward proxy on port `18080`. Chromium read the public make.fun API directly; no fixture or response interception was used. The capture checked HTTP 200 API responses, route content, a 19-row board, active filter state, identical footer metadata, the profile at desktop and mobile sizes, and the 256 KiB image cap.
 
-- `1-board.jpg`: root board, 1280×800, 76,880 bytes.
-- `2-bounty.jpg`: makefun-frontend-01 detail, 1280×800, 87,402 bytes; live pot $550, $0.50 entry fee, deadline and rewards visible.
-- `3-leaderboard.jpg`: threejs-fps-02, development/performance, 1280×800, 71,959 bytes; live ranked entries and API-defined metrics visible.
+- `screenshots/1-board.jpg`: live timetable, 1280×800, 80,575 bytes.
+- `screenshots/2-bounty.jpg`: makefun-frontend-01, 1280×800, 81,812 bytes; live pot $595.50, $0.50 entry fee, locked escrow, deadline, 20 rewards and participation checklist.
+- `screenshots/3-leaderboard.jpg`: threejs-fps-02 development/performance, 1280×800, 74,425 bytes; API wins and win rates, profile earnings, medals and tie-break rule.
 
-The public API intermittently returned 503 while under load. GET requests now explicitly accept JSON and retry 429/503 at most twice, respecting Retry-After with a bounded delay. The final capture completed without retries. Profile rendering passed the fixture browser checks; a separate live profile request did not finish during this session, so it is not represented as a live screenshot.
+Each screenshot was opened and inspected after the final capture. The shared footer reports the same measured shell size, 19 loaded bounties and API-refresh time in all three images.
 
-## Validation
+## Size And Dossier
 
-- Renderer/API checks and browser deep links for all four surfaces pass, including filtering, mobile overflow, runtime errors, request deduplication, minute caching and conditional ETag 304.
-- Desktop board and leaderboard spacing revised after inspecting live screenshots, followed by fresh captures.
-- Unchanged vendor library compared against the kit.
-- Node 22 main.ts produced `/tmp/makefun-final-a/dossier.json` and `/tmp/makefun-final-b/dossier.json`; recursive comparison of both complete output directories found no differences.
-- `git diff --check` passes.
-- Kit check with `--worktree`, run inside the kit: 4 passed, 0 failed; remote/transcript checks remain the site's checks at submission.
+The desktop shell files fetched by the initial module graph (`index.html`, `style.css`, `main.js`, `views.js`, `api.js`, `format.js`) total 10,116 bytes gzip-9. The browser-measured badge displays 9.9 KB. Detail modules load on demand; the responsive stylesheet loads and is measured at viewport widths up to 900 px.
 
-Operator performs submission after the recording is sealed. Do not pay again.
+`main.ts` copied the app and all three captures into two separate output directories. The two `dossier.json` files, both `outline.json` files and the complete output trees compared byte-identical. The outline lists declarations and a feature line for every source file. The vendored dossier library was not edited.
+
+## Checks
+
+- `node tools/verify.mjs`: pass against live public API data; 19 board rows, all four renderers and request deduplication.
+- `node tools/verify.mjs --browser`: pass; four deep links, viewport widths from 390 to 900 px, and no browser runtime errors.
+- `node tools/shoot.mjs`: pass; three fresh live screenshots and desktop/mobile profile smoke check.
+- `node --check` for the app modules, `main.ts` and tooling; `git diff --check`: pass.
+- No payment or submission was performed.
