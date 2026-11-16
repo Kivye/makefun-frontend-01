@@ -1,35 +1,5 @@
 [
-  {
-    "file": "1-board.jpg",
-    "route": "#/",
-    "viewport": {
-      "width": 1280,
-      "height": 800
-    },
-    "expect": "#board-list .board-row",
-    "format": "jpeg",
-    "quality": 82
-  },
-  {
-    "file": "2-bounty.jpg",
-    "route": "#/bounty/makefun-frontend-01",
-    "viewport": {
-      "width": 1280,
-      "height": 800
-    },
-    "expect": ".payout-table",
-    "format": "jpeg",
-    "quality": 82
-  },
-  {
-    "file": "3-leaderboard.jpg",
-    "route": "#/bounty/threejs-fps-02/leaderboard?phase=dev&view=performance",
-    "viewport": {
-      "width": 1280,
-      "height": 800
-    },
-    "expect": ".ranking-table .builder-name",
-    "format": "jpeg",
-    "quality": 82
-  }
+  {"file":"1-board.jpg","route":"#/","viewport":{"width":1280,"height":800},"expect":"#board-list .board-row","format":"jpeg","quality":82},
+  {"file":"2-bounty.jpg","route":"#/bounty/makefun-frontend-01","viewport":{"width":1280,"height":800},"expect":".payout-table","format":"jpeg","quality":82},
+  {"file":"3-leaderboard.jpg","route":"#/bounty/threejs-fps-02/leaderboard?phase=dev&view=performance","viewport":{"width":1280,"height":800},"expect":".ranking-table .builder-name","format":"jpeg","quality":82}
 ]

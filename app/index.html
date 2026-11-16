@@ -1,22 +1,13 @@
 <!doctype html>
-<!-- Feature: compact, read-only make.fun bounty board with four hash-routed surfaces. -->
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f4f5f2">
-  <title>Bounty timetable | make.fun</title>
-  <link rel="stylesheet" href="style.css">
-  <script type="module" src="main.js"></script>
-</head>
-<body>
-  <header class="topbar">
-    <a class="brand" href="#/"><span class="brand-mark">m</span><span>make.fun</span><small>BOUNTY TIMETABLE</small></a>
-    <nav aria-label="Main navigation"><a href="#/">Bounties</a><a href="#/bounty/threejs-fps-02/leaderboard?phase=dev&view=performance">Rankings</a><a href="#/profile/zkhiel">Builders</a></nav>
-    <span id="load-chip" class="load-chip">Measuring first load</span>
-  </header>
-  <a class="skip-link" href="#content">Skip to content</a>
-  <main tabindex="-1" id="content" aria-busy="true"><p class="loading">Loading public make.fun data...</p></main>
-  <footer class="meta-footer"><a href="#/">make.fun ↗</a><span id="footer-count">Public bounty data</span><span id="footer-updated">Loading</span><span>GET only · Page-lifetime cache</span></footer>
-</body>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f4f5f2">
+<title>Bounty timetable | make.fun</title>
+<link rel="stylesheet" href="style.css">
+<script type="module" src="main.js"></script>
+<header class="topbar"><a class="brand" href="#/"><span class="mark">m</span>make.fun <small>BOUNTY TIMETABLE</small></a><nav aria-label="Main"><a href="#/">Bounties</a><a href="#/bounty/threejs-fps-02/leaderboard?phase=dev&view=performance">Rankings</a><a href="#/profile/zkhiel">Builders</a></nav><span id="load-chip">Measuring first load</span></header>
+<a class="skip" href="#content">Skip to content</a>
+<main id="content" tabindex="-1" aria-busy="true">Loading public data…</main>
+<footer><a href="#/">make.fun ↗</a><span id="total">Public bounties</span><span id="fetched">Loading</span><span>GET only · Page-lifetime cache</span></footer>
 </html>
