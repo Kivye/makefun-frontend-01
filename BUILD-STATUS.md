@@ -19,3 +19,7 @@ Final application/screenshots commit: `491eee49fbb4971238e1d96e416c1ccd34978f5d`
 The kit check was rerun on that committed snapshot: **4 passed, 0 failed**.
 
 This subsequent status-only delivery commit contains the validation record. Its full final SHA is resolved with `git rev-parse HEAD` (a commit cannot embed its own content-derived SHA); the delivery response reports that exact SHA.
+
+## README badge repair — 16 November 2026 UTC
+
+Rewrote the README to restore all three live make.fun competition, rank and reward badges and a plain bounty-page link. The documentation retains the v4 Bounty Timetable concept, four surfaces, Node 22 launch instructions and measured first-load size. Only README.md and this status record were edited for this repair.
