@@ -1,42 +1,38 @@
-import {esc,count,money,shortDate,remaining,accepting,statusOf,bountyURL,profileURL} from './format.js';
-const pot = item => money(item.potUsd ?? item.rewardAmount);
-const fee = item => Number(item.entryFeeUsd ?? item.entryFeesUsd) ? money(item.entryFeeUsd ?? item.entryFeesUsd) : 'Free';
-const badge = item => {const [text,tone]=statusOf(item); return `<span class="status ${tone}">${text}</span>`;};
-const ranking = item => bountyURL(item.slug)+'/leaderboard?phase=dev&view=performance';
-export function sortBoardItems(items, now=Date.now()) {
-  return [...items].sort((a,b) => Number(accepting(b,now))-Number(accepting(a,now)) || (accepting(a,now) ? Date.parse(a.deadline)-Date.parse(b.deadline) : Date.parse(b.deadline)-Date.parse(a.deadline)));
+// Feature: deadline rail, opportunity totals and status filters.
+import { esc, num, money, date, shortDate, remaining, accepting, statusOf, bountyURL } from './format.js';
+const statusChip = b => { const [label,tone]=statusOf(b); return `<span class="status ${tone}">${esc(label)}</span>`; };
+const shortTitle = title => String(title||'Bounty').replace(/\b(the|for|with|make|best|your)\b/gi,'').trim().split(/\s+/).slice(0,1).join(' ');
+export function timetable(items,now=Date.now()) {
+  const day=86400000,start=new Date(now); start.setUTCHours(0,0,0,0);
+  const end=start.getTime()+14*day;
+  const ticks=Array.from({length:8},(_,i)=>`<span style="left:${i*100/7}%;top:0">${shortDate(start.getTime()+i*2*day)}</span>`).join('');
+  const dated=items.filter(b=>Number.isFinite(Date.parse(b.deadline))&&Date.parse(b.deadline)>=start.getTime()&&Date.parse(b.deadline)<=end).sort((a,b)=>Date.parse(a.deadline)-Date.parse(b.deadline));
+  const laneEnds=Array(5).fill(-1);
+  const chips=dated.map(b=>{
+    const at=(Date.parse(b.deadline)-start.getTime())/(end-start.getTime())*100;
+    let lane=laneEnds.findIndex(x=>at-x>=12);
+    if(lane<0)lane=laneEnds.indexOf(Math.min(...laneEnds));
+    laneEnds[lane]=at+12;
+    return `<a class="time-chip" style="--at:${at}%;top:${lane*19}px" href="${bountyURL(b.slug)}" title="${esc(b.title)} · ${date(b.deadline)}"><span>${esc(shortTitle(b.title))}</span><b>${money(b.potUsd??b.rewardAmount)}</b></a>`;
+  }).join('');
+  return `<section class="timetable"><div class="rail-head"><div><p class="eyebrow">NEXT 14 DAYS</p><h2>Deadlines, on the line</h2></div><span>${dated.length} scheduled</span></div><div class="rail" style="height:122px"><div class="rail-rules" style="top:98px">${Array.from({length:8},(_,i)=>`<i style="left:${i*100/7}%"></i>`).join('')}</div><div class="rail-chips">${chips||'<span class="rail-empty">No deadlines in this window</span>'}</div><div class="rail-dates" style="top:106px;bottom:auto;height:14px">${ticks}</div></div></section>`;
 }
-function rail(items) {
-  const now=Date.now(), groups=[];
-  for (const item of items.filter(b=>accepting(b,now) && Date.parse(b.deadline)-now<=604800000).slice(0,5)) {
-    const last=groups.at(-1);
-    if (last && Date.parse(item.deadline)-Date.parse(last[0].deadline)<7200000) last.push(item);
-    else groups.push([item]);
-  }
-  return `<section class="rail-wrap"><div class="rail-label"><b>DEADLINES</b><span>Next 7 days</span></div><div class="rail">${groups.map(group=>{
-    const item=group[0], title=group.length>1 ? group.length+' closing · '+shortDate(item.deadline) : item.title.replace(/^(build |make |the best |best |the )/i,'');
-    return `<a class="rail-marker ${Date.parse(item.deadline)-now<86400000?'urgent':''}" href="${bountyURL(item.slug)}" title="${esc(group.map(b=>b.title).join(' · '))}"><b>${esc(title)}</b><span>${group.map(b=>pot(b)+' · '+remaining(b.deadline,now)).join(' / ')}</span></a>`;
-  }).join('') || '<span>No deadlines within this week</span>'}</div></section>`;
-}
-export const boardRows = items => items.map(item=>`<a class="board-row" href="${bountyURL(item.slug)}"><span class="title-cell"><b>${esc(item.title)}</b><small>${esc(item.category || 'General')} · ${(item.skills||[]).slice(0,2).map(esc).join(' / ')}</small></span><strong>${pot(item)}</strong><span>${fee(item)}</span><span class="deadline-cell"><b data-deadline="${esc(item.deadline)}">${remaining(item.deadline)}</b><small>${shortDate(item.deadline)} UTC</small></span><span>${count(item.submissionCount)}</span>${badge(item)}</a>`).join('');
 export function boardView(data) {
-  const items=sortBoardItems(data.items||[]), categories=[...new Set(items.map(b=>b.category).filter(Boolean))].sort();
-  return `<section class="hero"><div><p class="eyebrow">MAKE.FUN / PUBLIC BOUNTIES</p><h1>Bounty timetable</h1></div><p class="hero-note"><b>${items.filter(b=>accepting(b)).length}</b> accepting entries<br>Escrowed prizes · payouts follow published results</p></section>${rail(items)}<section class="board"><div class="board-head"><div><h2>Available work</h2><span>Open first · nearest deadline first</span></div><input id="search" type="search" aria-label="Search bounties" placeholder="Search bounties"><select id="category" aria-label="Category"><option value="">All categories</option>${categories.map(c=>`<option>${esc(c)}</option>`).join('')}</select><div class="filters" role="group" aria-label="Status">${['All','Open','Ended'].map(s=>`<button data-filter="${s.toLowerCase()}" aria-pressed="${s==='All'}">${s}</button>`).join('')}</div></div><div class="column-head"><span>BOUNTY</span><span>POT</span><span>FEE</span><span>DEADLINE / LEFT</span><span>ENTRIES</span><span>STATUS</span></div><div id="board-list">${boardRows(items)}</div><p id="result-count"></p></section>`;
+  const items=data.items||[],live=items.filter(accepting);
+  const total=live.reduce((sum,b)=>sum+Number(b.potUsd??b.rewardAmount??0),0);
+  const delta=items.map(b=>b.potDeltaTodayUsd??b.todayPotDeltaUsd??b.deltaTodayUsd).find(v=>v!=null);
+  const categories=[...new Set(items.map(b=>b.category).filter(Boolean))].sort();
+  return `<section class="hero"><div class="hero-copy"><p class="eyebrow"><span class="pulse"></span> LIVE OPPORTUNITY</p><h1>Your next build.<br><em>On the clock.</em></h1><p>Make the window. Find the brief. Ship work worth rewarding.</p></div><aside class="hero-pot"><span class="eyebrow">LIVE PRIZE POOL</span><strong>${money(total)}</strong><span class="pot-caption">${num(live.length)} bounties accepting entries</span>${delta==null?'':`<span class="delta">${Number(delta)>=0?'+':''}${money(delta)} today</span>`}<span class="hero-rule"></span><small>${num(items.reduce((sum,b)=>sum+Number(b.submissionCount||0),0))} entries reported across this live feed</small></aside></section>${timetable(items)}<section class="board-section"><div class="section-head"><div><p class="eyebrow">THE LIVE BOARD</p><h2>Bounties <span class="count">${num(items.length)}</span></h2></div><span class="sort-note">Open first, then deadline</span></div><div class="filters"><label class="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search title or skill" aria-label="Search bounties"></label><select id="category" aria-label="Filter category"><option value="">Every category</option>${categories.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}</select><div class="filter-pills" role="group" aria-label="Bounty status">${[['all','All'],['open','Open'],['soon','Closing soon'],['paid','Paid']].map(([k,v])=>`<button class="filter-pill" data-filter="${k}" aria-pressed="${k==='all'}">${v}</button>`).join('')}</div></div><div class="table-head"><span>OPPORTUNITY</span><span>LIVE POT</span><span>ENTRY</span><span>DEADLINE / COUNTDOWN</span><span>STATUS</span><span>ENTRIES</span></div><div id="board-list"></div><div class="list-foot"><span id="result-count" role="status"></span></div></section>`;
 }
-function awards(item) {
-  const source=item.rewardsNow||item.rewards||[], rows=Array.isArray(source)?source:Object.entries(source).map(([place,amountUsd])=>({place,amountUsd}));
-  if (!rows.length) return `<tr><td>Prize</td><td>Live bounty pot</td><td>${pot(item)}</td></tr>`;
-  return rows.slice(0,5).map((r,i)=>`<tr><td>${esc(r.place??r.rank??i+1)}</td><td>${esc(r.title??r.label??'Place '+(i+1))}</td><td>${money(r.amountUsd??r.amount??r.prizeUsd)}</td></tr>`).join('')+(rows.length>5?`<tr><td colspan="3">And ${rows.length-5} more places</td></tr>`:'');
+export function boardRows(items) {
+  return items.length?items.map(b=>{
+    const close=Date.parse(b.deadline)>Date.now()?remaining(b.deadline):'Past deadline';
+    const hours=(Date.parse(b.deadline)-Date.now())/3600000,tone=hours<24&&hours>=0?'urgent':hours<48&&hours>=0?'soon':'';
+    return `<article class="bounty-row"><div class="opportunity"><span class="category-mark">${esc((b.category||'B').slice(0,1))}</span><div><a class="bounty-title" href="${bountyURL(b.slug)}">${esc(b.title)}</a><span class="category-line">${esc(b.category||'General')} · ${esc((b.skills||[]).slice(0,2).join(' / '))}</span></div></div><strong class="row-pot">${money(b.potUsd??b.rewardAmount)}</strong><span class="entry-fee">${Number(b.entryFeeUsd??b.entryFeesUsd)?money(b.entryFeeUsd??b.entryFeesUsd):'Free'}</span><span class="deadline-cell"><time class="countdown ${tone}" data-deadline="${esc(b.deadline)}">${close}</time><small>${shortDate(b.deadline)} · UTC</small></span><span>${statusChip(b)}</span><span class="entry-count">${num(b.submissionCount)}</span></article>`;
+  }).join(''):'<div class="empty-inline">No bounties match these filters.</div>';
 }
-const stats = values => values.map(([label,value])=>`<div><small>${label}</small><b>${value}</b></div>`).join('');
-export function bountyView(item) {
-  return `<div class="crumb"><a href="#/">← All bounties</a><a href="${ranking(item)}">View leaderboard →</a></div><section class="detail-head"><div><p class="eyebrow">${esc(item.category||'BOUNTY')} · ${esc(item.sponsor?.name||'MAKE.FUN')}</p><h1>${esc(item.title)}</h1><p class="summary">${esc(item.summary||item.description?.split('\n')[0]||'')}</p></div>${badge(item)}</section><div class="trust-strip"><b>Escrow-backed prize</b><span>Funds held for published results</span><span>Read-only public listing</span></div><section class="metrics">${stats([['LIVE POT',pot(item)],['ENTRY FEE',fee(item)],['ENTRIES',count(item.submissionCount)],[accepting(item)?'DEADLINE':'CLOSED',shortDate(item.deadline)+' · '+remaining(item.deadline)]])}</section><div class="detail-grid"><article><h2>Challenge brief</h2><div class="description">${esc(item.description||item.rules||'No description published.')}</div>${item.rules&&item.rules!==item.description?`<h2>Rules</h2><div class="description">${esc(item.rules)}</div>`:''}</article><aside><h2>Prize schedule</h2><table class="payout-table"><thead><tr><th>PLACE</th><th>AWARD</th><th>AMOUNT</th></tr></thead><tbody>${awards(item)}</tbody></table><p class="aside-note">Live pot: ${pot(item)} · ${esc(item.escrowLifecycle?.state||'Escrow status not provided')}</p><a href="${ranking(item)}">Open leaderboard →</a></aside></div>`;
-}
-export function leaderboardView(item,data,phase,view) {
-  const columns=(data.columns||[]).filter(c=>!c.hidden).slice(0,2), phases=item.phases?.length?item.phases:[{key:phase,title:phase}];
-  return `<div class="crumb"><a href="${bountyURL(item.slug)}">← ${esc(item.title)}</a><a href="#/">All bounties →</a></div><section class="ranking-head"><div><p class="eyebrow">PUBLIC RESULTS · PAGE SNAPSHOT</p><h1>Leaderboard</h1><p>${esc(item.title)} · ${esc(data.phase?.title||phase)}</p></div><div class="selects"><label>Phase<select id="phase">${phases.map(p=>`<option value="${esc(p.key)}" ${p.key===phase?'selected':''}>${esc(p.title)}</option>`).join('')}</select></label><label>View<select id="rank-view">${['performance','overall'].map(v=>`<option value="${v}" ${v===view?'selected':''}>${v==='overall'?'Overall':'Performance'}</option>`).join('')}</select></label></div></section><div class="table-scroll"><table class="ranking-table"><thead><tr><th>RANK</th><th>BUILDER / ENTRY</th>${columns.map(c=>`<th>${esc(c.title)}</th>`).join('')}</tr></thead><tbody>${(data.entries||[]).map(e=>`<tr><td class="rank">${esc(e.rank??'—')}</td><td><a class="builder-name" href="${profileURL(e.handle)}">@${esc(e.handle??'—')}</a><small>${esc(e.title??e.submission_id??'')}</small></td>${columns.map(c=>`<td>${esc(e.display?.[c.key]??e.values?.[c.key]??'—')}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${columns.length+2}">No public rankings for this view.</td></tr>`}</tbody></table></div><p class="aside-note">Scores and names are the fields returned by the public leaderboard endpoint.</p>`;
-}
-export function profileView(profile) {
-  const record=profile.record||{};
-  return `<div class="crumb"><a href="#/">← All bounties</a></div><section class="profile-head"><span class="avatar">@</span><div><p class="eyebrow">PUBLIC BUILDER PROFILE</p><h1>${esc(profile.display_name||'@'+profile.handle)}</h1><p>${esc(profile.bio||'No public bio.')}</p></div></section><section class="profile-stats">${stats([['Entered',count(record.competitions_entered)],['Placed',count(record.competitions_placed)],['Wins',count(record.competitions_won)],['Prizes',money(record.prize_usd)]])}</section><section class="activity"><h2>Recent entries</h2>${(profile.solutions||[]).map(s=>`<a href="${bountyURL(s.competition?.slug)}"><strong>${esc(s.title)}</strong><span>${esc(s.competition?.title||s.competition?.slug)}</span><small>${s.placement?'Place '+esc(s.placement):'Submission'} · ${shortDate(s.entered_at)}</small></a>`).join('')||'<p>No public entries.</p>'}</section>`;
+
+export function sortBoardItems(items,now=Date.now()) {
+  const acceptingStatus=b=>{const [label]=statusOf(b,now);return label==='OPEN'||label==='CLOSING SOON';};
+  return [...items].sort((a,b)=>Number(acceptingStatus(b))-Number(acceptingStatus(a))||Date.parse(a.deadline)-Date.parse(b.deadline));
 }
