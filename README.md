@@ -1,19 +1,17 @@
-# Bounty Timetable · v5
+# make.fun Bounty desk · v6
 
 [![make.fun · makefun-frontend-01](https://make.fun/badge/makefun-frontend-01.svg)](https://make.fun/bounty/makefun-frontend-01?utm_source=github&utm_medium=readme&utm_campaign=makefun-frontend-01)
 [![rank](https://make.fun/badge/makefun-frontend-01/Kivye/makefun-frontend-01/rank.svg)](https://make.fun/bounty/makefun-frontend-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=makefun-frontend-01)
 [![reward](https://make.fun/badge/makefun-frontend-01/Kivye/makefun-frontend-01/reward.svg)](https://make.fun/bounty/makefun-frontend-01?utm_source=github&utm_medium=readme&utm_campaign=makefun-frontend-01)
 
-Your next build. On the clock. A static, read-only frontend for the [make.fun bounty](https://make.fun/bounty/makefun-frontend-01), using only public GET responses from https://make.fun/api.
+A persistent opportunity board beside the brief, ranking or builder profile. Built for the [make.fun frontend bounty](https://make.fun/bounty/makefun-frontend-01). All remote data comes from read-only GET requests to https://make.fun/api. There are no external fonts or framework dependencies.
 
-Run `node serve.ts --port 8081` with Node 22. The app has four deep-linkable hash routes: `#/`, `#/bounty/makefun-frontend-01`, `#/bounty/threejs-fps-02/leaderboard?phase=dev&view=performance`, and `#/profile/zkhiel`.
+The 420 px board retains search, category and status filters, open-first sorting, all returned rows and an expandable deadline window. The default split opens a live bounty immediately. Detail panes retain the full brief, prerequisites, rules, judging facts, three participation checkboxes, every payout place, escrow/dispute facts and dates. Repeated reward amounts are grouped into explicit ranges; expand the ladder for individual places.
 
-The board keeps the fourteen-day timetable, search/category/status filters, open-first ordering and every API row. Bounty details retain the participation checklist, complete payout ladder, expandable brief/rules and escrow/date facts. Rankings retain medals, match wins, win rates, streaks, profile earnings, phase/view selectors and tie-break rules. Profiles include activity pagination, statistics, badges and payout evidence.
+Rankings keep every API row, medals, wins, win-rate bars, profile earnings, phase/view controls and tie-break facts. Profiles retain public links, statistics, paginated activity, a badge shelf and payout evidence. Missing public data is shown as unavailable. Hash routes support `#/bounty/<slug>`, `#/leaderboard/<slug>`, the earlier `#/bounty/<slug>/leaderboard` form and `#/profile/<handle>`. Below 900 px the board appears above the detail.
 
-Requests are deduplicated and cached for this page session. The shared footer's update time records that session's initial board fetch, rather than implying a background refresh. No cached response is presented as a subsequent network refresh. Missing fields remain unavailable. Detail JavaScript/CSS and mobile CSS load on demand. The size badge measures the actual six shell files, plus mobile CSS on narrow screens, using browser gzip; `tools/verify.mjs` also reports exact gzip-9 bytes.
+Use Node 22: `MAKEFUN_OUTPUT_DIR=out node main.ts` generates the deterministic dossier through the unchanged kit module. `node serve.ts --port 8081` serves the app. The build measures gzip-9 of index.html, style.css, main.js, views.js, api.js and format.js into app/shell.json; the UI displays that exact total. The full default brief renderer is part of these six files. Profile and ranking modules/styles load on demand. Requests are cached and deduplicated per session; the footer honestly records the first API fetch time.
 
-Capture live screenshots using `node tools/fwdproxy.mjs 18080` and `node tools/shoot.mjs`. Chromium routes every request through the loopback proxy, which tunnels remote HTTPS through HTTPS_PROXY. Set CHROMIUM_PATH and optionally PLAYWRIGHT_MODULE for the local installation. The capture script waits for window.__shotReady, checks the full surfaces and publishes exactly three 1280×800 quality-82 JPEGs only after validation.
+Run `node tools/fwdproxy.mjs 18080`, then `node tools/shoot.mjs` with CHROMIUM_PATH set to the installed Chromium executable. All browser requests pass through that proxy; HTTPS tunnels through HTTPS_PROXY. The capture script waits for window.__shotReady and writes exactly three 1280×800 quality-82 JPEGs. `node tools/verify.mjs` checks the shell budget and live interactions.
 
-Run `node tools/verify.mjs` for shell and render checks. Run `MAKEFUN_OUTPUT_DIR=out node main.ts` to stage app/, screenshots/, a deterministic outline and the kit dossier. The unchanged vendor/makefun-frontend.ts owns dossier generation. No build step or external font is needed by the app.
-
-MIT licensed. See BUILD-STATUS.md for this session's measured result and validation.
+See BUILD-STATUS.md for this session's verification. MIT licensed.

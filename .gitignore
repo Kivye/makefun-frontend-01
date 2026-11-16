@@ -1,6 +1,6 @@
-/out/
-/output/
-/node_modules/
-/scratch/
-/test-results/
+node_modules/
+out/
+output/
+scratch/
+test-results/
 *.log
