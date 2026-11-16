@@ -1,19 +1,19 @@
-# Full rewrite validation — 16 November 2026 UTC
+# Full rewrite validation — 16 November 2026
 
-Every requested text file was deleted and then authored in one complete write in this session: the six app files, main.ts, serve.ts, shots.json, .gitignore, LICENSE, README.md, this record and the three tools. No patch or line edit was used. The original kit vendor remains byte-identical to starter/vendor/makefun-frontend.ts.
+All 16 requested text files were deleted with rm and written in full during this session: app/index.html, app/api.js, app/format.js, app/views.js, app/main.js, app/style.css, main.ts, serve.ts, shots.json, .gitignore, LICENSE, README.md, BUILD-STATUS.md, tools/fwdproxy.mjs, tools/shoot.mjs and tools/verify.mjs. No patching or line-editing was used. The three required badge lines and bounty link remain in README. LICENSE includes the full MIT terms and SPDX declaration.
 
-The Bounty Timetable layout retains its 50 px header, 76 px hero, 72 px deadline rail and 44 px alternating board rows. Eleven complete rows fit the 1280×800 capture. All four hash surfaces use public credential-free GET API requests, page-lifetime caching and readiness signals. Rankings make no profile fan-out requests.
+The v4 Bounty Timetable design retains the 50px header, 76px compact hero, 72px seven-day deadline rail, 44px alternating rows and fixed-width countdowns. Eleven complete rows fit the desktop capture. The four hash surfaces, filters, open-first ordering, compact payout schedule, escrow strip, public profiles and API-only leaderboard fields remain present. Requests are credential-free GETs to make.fun/api with page-lifetime deduplication. There is no profile fan-out from rankings.
 
-After opening and visually inspecting all three first captures, a separate full-file rewrite of app/format.js improved invalid-number handling and case-insensitive paid status detection. Edge-case assertions passed. All three routes were recaptured and every final JPEG was opened and inspected again.
+After the first three screenshots were opened and visually inspected, app/format.js was deleted and rewritten as a separate revision. It now distinguishes whitespace-only numeric values from genuine zero and normalizes surrounding whitespace in status values. Assertions for both cases passed. The three screenshots were recaptured against final code and opened again for inspection.
 
-Validation:
+Validation results:
 
-- Live renderer/API checks passed with 18 board records, deadline-based acceptance, escaping, ordering, all four renderers and request deduplication.
-- Browser checks passed: search, Open filter, direct profile URL, no ranking profile fan-out, no JavaScript exceptions, no desktop overflow and no board overflow at 390 px.
-- Exactly three JPEGs at 1280×800, quality 82: 1-board.jpg 119,827 bytes; 2-bounty.jpg 146,001 bytes; 3-leaderboard.jpg 78,181 bytes. Each is below 256 KiB.
-- Measured browser header: 9.6 KB gzip for the six first-load assets. Independent Node gzip sum: 9,825 bytes, reduced from the earlier 11.5 KB display. API response bytes are excluded.
-- Two builds using Node v22.21.0 and MAKEFUN_OUTPUT_DIR=out yielded byte-identical dossier.json. Dossier SHA-256: c8979722e7022ba93735bbf204487ac3690ef17e8ed9400522a1412af8a6807b.
-- Kit worktree check: 4 passed, 0 failed, 16 skipped, 5 checked at submission. The first worktree check required an explicit SPDX identifier; LICENSE was deleted and fully rewritten with SPDX-License-Identifier: MIT plus the complete MIT grant and disclaimer, then the check passed.
-- Vendor comparison and git diff --check passed. The kit's sealed transcript/authorship and submission-only checks run server-side, not in this local command.
+- Live API checks passed: 18 board records, all four renderers, escaping, deadline acceptance, ordering and shared GET requests.
+- Chromium checks passed through the loopback forward proxy: search, Open filter, direct profile route, no ranking fan-out, no page exceptions, desktop and 390px mobile containment.
+- Exactly three 1280×800 quality-82 JPEGs: 1-board.jpg 122256 bytes; 2-bounty.jpg 148428 bytes; 3-leaderboard.jpg 78544 bytes. All are below 262144 bytes.
+- Browser first-load chip: 9.5 KB gzip. Independent Node gzip sum: 9778 bytes across the six initial files. This is below 10 KB and below the requested 11.5 KB starting reference; API payloads and HTTP overhead are excluded.
+- Node v22.21.0, MAKEFUN_OUTPUT_DIR=out: two successful builds produced byte-identical dossier.json. SHA-256: ba1f688e0005302a63f1bbf2a56f85550b355a640f78f7996d75ed76cd39ae1e.
+- Fresh-kit check with --worktree: 4 passed, 0 failed, 16 skipped, 5 checked at submission. The required plain check also returned 0 failed. Sealed transcript/authorship checks are performed server-side and are not certified by this local check.
+- vendor/makefun-frontend.ts compares byte-identically with the fresh kit starter. git diff --check passed.
 
-Commit reference available before this delivery commit: 55be2d8c256bf0b3c728086424bd48e243e7d73b (base). This record is included in the commit named `v4: full rewrite, dense timetable`. Its own content-derived SHA cannot be embedded in itself; the exact delivery SHA and push result are reported after commit creation.
+Pre-delivery base SHA: 306ec9822744f59cb9b3b836d6ed697c16afe9e6. This record is included before the delivery commit named “v4: full rewrite, dense timetable”. The delivery commit's own SHA cannot be embedded in its content; its exact full SHA and push outcome are reported in the session's final response.

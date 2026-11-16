@@ -4,27 +4,29 @@
 [![rank](https://make.fun/badge/makefun-frontend-01/Kivye/makefun-frontend-01/rank.svg)](https://make.fun/bounty/makefun-frontend-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=makefun-frontend-01)
 [![reward](https://make.fun/badge/makefun-frontend-01/Kivye/makefun-frontend-01/reward.svg)](https://make.fun/bounty/makefun-frontend-01?utm_source=github&utm_medium=readme&utm_campaign=makefun-frontend-01)
 
-A dense, read-only view of public make.fun opportunities. Competition: https://make.fun/bounty/makefun-frontend-01.
+Entry for the [make.fun frontend bounty](https://make.fun/bounty/makefun-frontend-01). A compact work board makes deadlines, individual pots, fees and entry counts easy to compare without inventing an aggregate prize figure.
 
-The board combines open-first ordering, a seven-day deadline rail, search, category selection and All/Open/Ended filters. Nearby deadlines share a card without combining unrelated prize totals. Detail pages present the brief, escrow context, entry statistics and the first five payout places. Rankings use the public API's rank, handle, entry title and score fields, with phase and view controls. Builder profiles show public records and entries.
+The seven-day rail groups overlapping deadlines. The table sorts accepting bounties first and supports search, category and status filters. Bounty details provide the brief, escrow context and a compact payout schedule. Rankings display API-supplied ranks, handles, titles and scores; phase and view selectors use the same public endpoint without profile fan-out. Public builder profiles complete the four surfaces.
 
-Routes:
+Open these hash routes:
 
 - `#/`
 - `#/bounty/makefun-frontend-01`
 - `#/bounty/threejs-fps-02/leaderboard?phase=dev&view=performance`
 - `#/profile/zkhiel`
 
-No framework, remote fonts or external asset origins are needed. Public data is fetched only through credential-free GET requests to `https://make.fun/api`. Requests are deduplicated in memory; reload for fresh data. Countdown labels update locally. The header measures the summed gzip sizes of all six initial application files with CompressionStream; API payloads are excluded.
+All remote data comes from credential-free GET requests to `https://make.fun/api`. The in-memory response cache lasts until reload. No fonts or assets require another origin. The header measures each of the six first-load files with browser gzip compression and sums their compressed lengths; it excludes API data and HTTP overhead.
 
-Use Node 22.21:
+Run with Node 22.21.0:
 
 ```sh
 node serve.ts --port 8081
+node tools/fwdproxy.mjs
+node tools/shoot.mjs
 NODE_USE_ENV_PROXY=1 node tools/verify.mjs
 MAKEFUN_OUTPUT_DIR=out node main.ts
 ```
 
-For live screenshots, run `node tools/fwdproxy.mjs` alongside the static server. Set `CHROMIUM_PATH` to a cached Chromium executable and run `node tools/shoot.mjs` with playwright-core installed locally. All browser traffic passes through the loopback proxy; remote HTTPS tunnels use HTTPS_PROXY. The capture tool waits for `window.__shotReady`, checks rendering and writes exactly three 1280×800 quality-82 JPEGs under 256 KiB each.
+The screenshot script requires playwright-core and a cached Chromium, found automatically or selected through CHROMIUM_PATH. Browser traffic uses the loopback forward proxy on port 18080, which tunnels remote HTTPS through HTTPS_PROXY. Three JPEGs are captured at 1280×800, quality 82, after `window.__shotReady` signals that route rendering and size measurement have settled. Each capture must remain below 256 KiB.
 
-`main.ts` stages the application and captures, then calls the unchanged kit library to produce a deterministic dossier. BUILD-STATUS.md records the final checks. MIT licensed; `vendor/makefun-frontend.ts` is the original kit file.
+The build copies app/ and screenshots/ to the chosen output and calls the unchanged vendor kit to produce dossier.json. Repeating the build must produce identical bytes. See BUILD-STATUS.md for the validation record. Source is MIT licensed.

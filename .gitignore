@@ -1,10 +1,10 @@
-# Generated packages, local tooling and temporary validation output
-/out/
-/output/
-/node_modules/
-/test-results/
-/scratch/
-/package.json
-/package-lock.json
-*.log
+# Local dependencies and reproducible build products
+node_modules/
+out/
+output/
+scratch/
+test-results/
+package.json
+package-lock.json
 *.tmp
+*.log
