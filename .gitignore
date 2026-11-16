@@ -1,6 +1,2 @@
-node_modules/
-out/
-output/
-scratch/
-test-results/
-*.log
+out
+node_modules
