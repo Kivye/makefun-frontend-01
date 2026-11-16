@@ -1,7 +1,6 @@
-# makefun-frontend-01 — generated output and local scratch
-/output/
 /out/
+/output/
 /node_modules/
-/test-results/
 /scratch/
+/test-results/
 *.log
