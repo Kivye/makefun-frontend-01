@@ -7,13 +7,15 @@ import { buildDossier } from './vendor/makefun-frontend.ts';
 const root = dirname(fileURLToPath(import.meta.url));
 const output = resolve(process.env.MAKEFUN_OUTPUT_DIR || '/output');
 const protectedPaths = [root, join(root,'app'), join(root,'screenshots')];
-if (protectedPaths.some(path => output === path || output.startsWith(path + sep))) {
-  throw new Error('Choose an output directory outside the source tree.');
+if (protectedPaths.slice(1).some(path => output === path || output.startsWith(path + sep)) || output === root || root.startsWith(output + sep)) {
+  throw new Error('Output must not replace or contain source files.');
 }
 
 const screenshotDir = join(root,'screenshots');
 const screenshots = readdirSync(screenshotDir).filter(name => /\.(?:jpg|jpeg|png)$/i.test(name)).sort();
 if (screenshots.length !== 3) throw new Error('Exactly three live screenshots are required before packaging.');
+const requiredShots = ['1-board.jpg','2-bounty.jpg','3-leaderboard.jpg'];
+if (screenshots.some((name,index) => name !== requiredShots[index])) throw new Error(`Expected exactly ${requiredShots.join(', ')}.`);
 
 const sourceNames = readdirSync(join(root,'app')).filter(name => /\.(?:html|js|mjs|css|json)$/i.test(name)).sort();
 const declarations = /\b(?:export\s+)?(?:async\s+)?(?:function|class)\s+([\w$]+)|\bexport\s+(?:const|let|var)\s+([\w$]+)/g;
@@ -32,7 +34,7 @@ for (const name of ['app','screenshots']) {
 const caps = { text_max_bytes:163840, screenshots:{max:3,max_bytes:262144}, app_max_files:993, app_max_bytes:16777216 };
 const dossier = buildDossier(output,caps);
 writeFileSync(join(output,'dossier.json'),dossier);
-writeFileSync(join(output,'outline.json'),JSON.stringify(outline,null,2)+'\n');
+// Keep the submission limited to the app, three captures and dossier.
 for (const file of outline) {
   console.log(`app/${file.name}: ${file.declarations.join(', ') || 'page/style declarations'} — ${file.feature}`);
 }

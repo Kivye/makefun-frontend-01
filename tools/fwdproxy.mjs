@@ -3,7 +3,7 @@ import http from 'node:http';
 import net from 'node:net';
 import tls from 'node:tls';
 
-const proxyAddress = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+const proxyAddress = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy;
 const upstream = proxyAddress ? new URL(proxyAddress) : null;
 const authorization = upstream?.username
   ? 'Basic ' + Buffer.from(`${decodeURIComponent(upstream.username)}:${decodeURIComponent(upstream.password)}`).toString('base64')
@@ -27,6 +27,7 @@ const server = http.createServer((request, response) => {
       if (!response.headersSent) response.writeHead(502);
       response.end('Local server unavailable');
     });
+    localRequest.setTimeout(20000, () => localRequest.destroy(new Error('Loopback timeout')));
     request.pipe(localRequest);
   } catch {
     response.writeHead(400).end('Invalid target');
@@ -49,7 +50,7 @@ server.on('connect', (request, client, head) => {
   client.on('close', () => socket.destroy());
   socket.setTimeout(30000, () => socket.destroy());
   socket.once(upstream.protocol === 'https:' ? 'secureConnect' : 'connect', () => {
-    socket.write(`CONNECT ${request.url} HTTP/1.1\r\nHost: ${upstream.host}\r\n${authorization ? `Proxy-Authorization: ${authorization}\r\n` : ''}Connection: keep-alive\r\n\r\n`);
+    socket.write(`CONNECT ${request.url} HTTP/1.1\r\nHost: ${request.url}\r\n${authorization ? `Proxy-Authorization: ${authorization}\r\n` : ''}Connection: keep-alive\r\n\r\n`);
     let buffer = Buffer.alloc(0);
     const handshake = chunk => {
       buffer = Buffer.concat([buffer, chunk]);

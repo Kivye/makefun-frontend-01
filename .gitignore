@@ -5,3 +5,8 @@
 /test-results/
 /scratch/
 *.log
+
+# Capture tooling installed locally, never shipped
+/package-lock.json
+/package.json
+*.tmp

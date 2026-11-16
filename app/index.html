@@ -1,21 +1,22 @@
 <!doctype html>
-<!-- Feature: live bounty timetable, challenge detail, money-aware rankings and public builder records. -->
+<!-- Feature: compact, read-only make.fun bounty board with four hash-routed surfaces. -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Bounty timetable · make.fun</title>
+  <meta name="theme-color" content="#f4f5f2">
+  <title>Bounty timetable | make.fun</title>
   <link rel="stylesheet" href="style.css">
   <script type="module" src="main.js"></script>
 </head>
 <body>
-  <a class="skip" href="#content">Skip to content</a>
   <header class="topbar">
-    <a class="brand" href="#/" aria-label="Bounty timetable home"><span class="brand-mark">m</span><span>make.fun</span><span class="brand-note">BOUNTY TIMETABLE</span></a>
-    <nav aria-label="Main"><a href="#/" id="nav-board">Bounties</a><a href="#/bounty/threejs-fps-02/leaderboard?phase=dev&view=performance">Leaderboard</a><a href="#/profile/zkhiel">Builders</a></nav>
-    <div class="header-badges"><span class="load-chip" id="load-chip">Measuring first load…</span><span class="framework-chip">ZERO-FRAMEWORK</span></div>
+    <a class="brand" href="#/"><span class="brand-mark">m</span><span>make.fun</span><small>BOUNTY TIMETABLE</small></a>
+    <nav aria-label="Main navigation"><a href="#/">Bounties</a><a href="#/bounty/threejs-fps-02/leaderboard?phase=dev&view=performance">Rankings</a><a href="#/profile/zkhiel">Builders</a></nav>
+    <span id="load-chip" class="load-chip">Measuring first load</span>
   </header>
-  <main id="content" tabindex="-1" aria-busy="true"><section class="loading"><span class="loader"></span><p>Reading the public make.fun API</p></section></main>
-  <footer class="meta-footer" aria-label="Live dataset metadata"><a class="footer-brand" href="#/">make.fun <span>↗</span></a><span id="footer-size">First load: measuring</span><span id="footer-count">Bounties: loading</span><span id="footer-updated">Updated: loading</span></footer>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <main tabindex="-1" id="content" aria-busy="true"><p class="loading">Loading public make.fun data...</p></main>
+  <footer class="meta-footer"><a href="#/">make.fun ↗</a><span id="footer-count">Public bounty data</span><span id="footer-updated">Loading</span><span>GET only · Page-lifetime cache</span></footer>
 </body>
 </html>

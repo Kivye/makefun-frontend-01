@@ -1,27 +1,21 @@
-# Build Status · v3
+# Build Status v4
 
-The v3 rewrite restores `app/` as the only frontend tree. The duplicate `src/` tree and `tools/build.mjs` are removed. The public explorer has four routes: the timetable, bounty detail, competition leaderboard and builder profile. This session did not make another fee payment or submit an entry.
+Session review found and repaired the missing gzip export that prevented module startup, the expired-entry acceptance override, and the board open-count callback. Nearby deadline groups now show individual pots. Every application and delivery/tooling file has received a functional, content or documentation revision in this session; the kit vendor remains unchanged.
 
-## Live Captures
+Validation results and commit identity are recorded after the visual revision and final checks below.
 
-`tools/shoot.mjs` served the app on `127.0.0.1:8081` and used the loopback forward proxy on port `18080`. Chromium read the public make.fun API directly; no fixture or response interception was used. The capture checked HTTP 200 API responses, route content, a 19-row board, active filter state, identical footer metadata, the profile at desktop and mobile sizes, and the 256 KiB image cap.
+## Final validation — 16 November 2026 UTC
 
-- `screenshots/1-board.jpg`: live timetable, 1280×800, 80,575 bytes.
-- `screenshots/2-bounty.jpg`: makefun-frontend-01, 1280×800, 81,812 bytes; live pot $595.50, $0.50 entry fee, locked escrow, deadline, 20 rewards and participation checklist.
-- `screenshots/3-leaderboard.jpg`: threejs-fps-02 development/performance, 1280×800, 74,425 bytes; API wins and win rates, profile earnings, medals and tie-break rule.
+- Opened and inspected all three live captures, revised views/CSS after inspection, then recaptured and opened all three again. The visual revision removed overlapping rail cards, fixed the escrow state text and prevented stretched status chips.
+- Screenshots: exactly three JPEGs, 1280×800, quality 82. Sizes: board 120,254 B; bounty 141,815 B; leaderboard 76,731 B. Capture metadata and required rendered selectors are in shots.json.
+- Browser checks: 11 complete desktop board rows, working search/status filters, direct leaderboard/profile URLs, no leaderboard profile fan-out, no browser exceptions, no horizontal overflow at 390 px.
+- Live renderer/API checks: PASS, 18 board records; deadline acceptance, payout fallback, escaping and page-lifetime request deduplication checked.
+- Header reports actual browser gzip bytes, 11.5 KB. Node gzip-9 total is 11,736 B. The approximate 10 KB target was exceeded to retain all four readable surfaces.
+- Two Node 22.21 builds produced byte-identical dossier.json. SHA-256: 20d6a7f5deff9c9d2734be71e7f411ee59a61b72b4d22cbf3e7f44eb3ae77734.
+- Vendor library matches the kit byte for byte. git diff --check passes.
+- Kit check: 4 passed, 0 failed, 16 skipped, 5 checked at submission. The kit does not run the browser or locally grade this competition; sealed transcript and submission checks remain server-side.
 
-Each screenshot was opened and inspected after the final capture. The shared footer reports the same measured shell size, 19 loaded bounties and API-refresh time in all three images.
+Final application/screenshots commit: `491eee49fbb4971238e1d96e416c1ccd34978f5d`.
+The kit check was rerun on that committed snapshot: **4 passed, 0 failed**.
 
-## Size And Dossier
-
-The desktop shell files fetched by the initial module graph (`index.html`, `style.css`, `main.js`, `views.js`, `api.js`, `format.js`) total 10,116 bytes gzip-9. The browser-measured badge displays 9.9 KB. Detail modules load on demand; the responsive stylesheet loads and is measured at viewport widths up to 900 px.
-
-`main.ts` copied the app and all three captures into two separate output directories. The two `dossier.json` files, both `outline.json` files and the complete output trees compared byte-identical. The outline lists declarations and a feature line for every source file. The vendored dossier library was not edited.
-
-## Checks
-
-- `node tools/verify.mjs`: pass against live public API data; 19 board rows, all four renderers and request deduplication.
-- `node tools/verify.mjs --browser`: pass; four deep links, viewport widths from 390 to 900 px, and no browser runtime errors.
-- `node tools/shoot.mjs`: pass; three fresh live screenshots and desktop/mobile profile smoke check.
-- `node --check` for the app modules, `main.ts` and tooling; `git diff --check`: pass.
-- No payment or submission was performed.
+This subsequent status-only delivery commit contains the validation record. Its full final SHA is resolved with `git rev-parse HEAD` (a commit cannot embed its own content-derived SHA); the delivery response reports that exact SHA.

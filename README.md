@@ -1,49 +1,33 @@
-# Bounty Timetable
+# Bounty Timetable v4
 
-[![make.fun bounty](https://make.fun/badge/makefun-frontend-01.svg)](https://make.fun/bounty/makefun-frontend-01)
-[![Live rank](https://make.fun/badge/makefun-frontend-01/Kivye/makefun-frontend-01/rank.svg)](https://make.fun/bounty/makefun-frontend-01)
-[![Live reward](https://make.fun/badge/makefun-frontend-01/Kivye/makefun-frontend-01/reward.svg)](https://make.fun/bounty/makefun-frontend-01)
+A read-only make.fun explorer for live opportunities, deadlines, challenge details, public results and builder records. Plain HTML, CSS and JavaScript modules; no framework or build step.
 
-“Your next build. On the clock.” A read-only make.fun explorer for live opportunities, their deadlines, challenge details, public results and builder records. The interface is plain HTML, CSS and JavaScript modules with no framework or build step.
+## Routes
 
-## Run locally
+- `#/` — open-first board and seven-day deadline rail
+- `#/bounty/makefun-frontend-01` — public brief and compact payout table
+- `#/bounty/threejs-fps-02/leaderboard?phase=dev&view=performance` — public rankings
+- `#/profile/zkhiel` — public builder profile
 
-Node 22 or later serves the files directly from `app/`:
+## Run and package
 
 ```sh
 node serve.ts --port 8081
-```
-
-Open `http://127.0.0.1:8081/`. Supported routes include:
-
-- `#/` — opportunity board and 14-day deadline rail
-- `#/bounty/makefun-frontend-01` — public bounty brief and reward ladder
-- `#/bounty/threejs-fps-02/leaderboard?phase=dev&view=performance` — public rankings
-- `#/profile/zkhiel` — builder activity, record and payouts
-
-Displayed bounty, entry, rank and builder figures come from `https://make.fun/api`; missing API fields remain unavailable. Career totals and payouts on rankings come from each listed builder's public profile response, while match wins and win rate come from the competition leaderboard response. The header measures the six-file desktop shell with the browser's gzip stream. Detail modules load on demand; tablet and phone widths also load a responsive stylesheet, which is included in their measurement. All API requests are read-only GETs with credentials omitted.
-
-## Live screenshots
-
-The repository's three JPEGs are captured from the running app with Chromium against make.fun's live API. Install `playwright-core` outside the app tree and set `PLAYWRIGHT_MODULE` if needed, along with `CHROMIUM_PATH` to a local Chromium executable. The forward proxy lets Chromium reach the API through the environment egress proxy:
-
-```sh
-node tools/fwdproxy.mjs 18080
-SHOT_PROXY=http://127.0.0.1:18080 node tools/shoot.mjs
-```
-
-`shots.json` records the three 1280×800 routes. Capture visits them in one live session so the fixed footer metadata is identical. It checks the live API responses and route content, plus the profile on desktop and mobile, and publishes the new images only after every check succeeds.
-
-## Dossier
-
-With exactly three screenshots in `screenshots/`, stage the entry outside the source tree:
-
-```sh
 MAKEFUN_OUTPUT_DIR=/tmp/makefun-output node main.ts
 ```
 
-`main.ts` copies `app/` and `screenshots/`, creates the platform dossier using the unchanged `vendor/makefun-frontend.ts`, and writes `outline.json` with each source file's feature summary and declarations. Both the outline and dossier are deterministic for unchanged inputs.
+Displayed figures come from `https://make.fun/api`; leaderboard rows use only that endpoint's response. API answers are cached in memory for the page lifetime and are not revalidated. The header measures browser CompressionStream gzip bytes of the HTML, CSS and modules fetched on first load. All API requests are read-only GETs with credentials omitted.
+
+## Screenshots
+
+The three JPEGs are captured from live API routes using `tools/shoot.mjs`, Chromium and `tools/fwdproxy.mjs`. Capture waits for `window.__shotReady` and uses the 1280×800 viewports listed in `shots.json`.
 
 ## License
 
-MIT. The competition dossier library in `vendor/makefun-frontend.ts` is provided by the make.fun kit and remains unchanged.
+MIT. `vendor/makefun-frontend.ts` is the unchanged competition kit library.
+
+## Validation and capture
+
+Run `node tools/verify.mjs` with proxy-aware Node fetch (`NODE_USE_ENV_PROXY=1` on Node 22.21). Install playwright-core locally for capture; set CHROMIUM_PATH to the cached Chromium executable. Start the server and forward proxy, then run `node tools/shoot.mjs`. Capture fails on route errors, missing tables, overflow or oversized images within bounded timeouts. `shots.json` also records the required rendered selector and JPEG encoding.
+
+The rail shows the five nearest deadlines within seven days, in chronological cards, merging deadlines less than two hours apart; amounts separated by slashes are individual bounty pots, never a shared prize pool. Countdown labels tick locally; this does not refresh API answers. Reload the page to fetch a new snapshot.
