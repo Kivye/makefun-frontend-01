@@ -1,0 +1,1 @@
+{"type":"module","scripts":{"build":"node main.ts","serve":"node serve.ts"}}
