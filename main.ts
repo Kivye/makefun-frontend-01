@@ -1,18 +1,15 @@
-import {readFile,writeFile,mkdir,cp,readdir} from 'node:fs/promises';
+import { buildDossier } from './vendor/makefun-frontend.ts';
 import {fileURLToPath} from 'node:url';
-import {resolve,join,isAbsolute} from 'node:path';
-import {gzipSync} from 'node:zlib';
+import {resolve,join,relative,isAbsolute} from 'node:path';
+import {mkdir,rm,cp,writeFile,readdir,stat} from 'node:fs/promises';
 const root=fileURLToPath(new URL('.',import.meta.url));
-const output=resolve(root,process.env.MAKEFUN_OUTPUT_DIR||'/output');
-if(output===root||output.startsWith(root+'/app/')||output===join(root,'app'))throw Error('Unsafe output directory');
-await mkdir(output,{recursive:true});
-await cp(join(root,'app'),join(output,'app'),{recursive:true});
-await cp(join(root,'screenshots'),join(output,'screenshots'),{recursive:true});
-const bytes=gzipSync(await readFile(join(root,'app/index.html')),{level:9}).length;
-await writeFile(join(output,'app/shell.json'),JSON.stringify({bytes})+'\n');
-let sources=[];
-for(const name of (await readdir(join(output,'app'))).sort())sources.push('### app/'+name+'\n'+await readFile(join(output,'app',name),'utf8'));
-let images=[];
-for(const name of (await readdir(join(output,'screenshots'))).sort())images.push({name,mime:'image/jpeg',data:(await readFile(join(output,'screenshots',name))).toString('base64')});
-await writeFile(join(output,'dossier.json'),JSON.stringify({text:'Load: one file · '+bytes+' B gzip-9\n'+sources.join('\n\n'),screenshots:images})+'\n');
-console.log(JSON.stringify({output,bytes,screenshots:images.length}));
+const outputDir=resolve(process.env.MAKEFUN_OUTPUT_DIR||'/output');
+if(outputDir===resolve(root)||['app','screenshots','vendor'].some(p=>{const r=relative(join(root,p),outputDir);return r===''||(!r.startsWith('..')&&!isAbsolute(r))}))throw Error('Unsafe output directory');
+await mkdir(outputDir,{recursive:true});
+for(const name of ['app','screenshots']){await rm(join(outputDir,name),{recursive:true,force:true});await cp(join(root,name),join(outputDir,name),{recursive:true});}
+await writeFile(join(outputDir,'dossier.json'),buildDossier(outputDir,{text_max_bytes:163840,screenshots:{max:3,max_bytes:262144},app_max_files:993,app_max_bytes:16777216}));
+const files=[];
+async function walk(dir,prefix=''){for(const e of await readdir(dir,{withFileTypes:true})){const name=prefix+e.name,path=join(dir,e.name);if(e.isDirectory())await walk(path,name+'/');else files.push({name,bytes:(await stat(path)).size});}}
+await walk(join(root,'app'));files.sort((a,b)=>a.name.localeCompare(b.name));
+await writeFile(join(outputDir,'outline.json'),JSON.stringify(files,null,2)+'\n');
+console.log(`Built ${files.length} app files to ${outputDir}`);
