@@ -1,5 +1,8 @@
-import {createServer} from 'node:http';
-import {readFileSync} from 'node:fs';
-import {resolve,extname} from 'node:path';
-const root=resolve(process.env.MAKEFUN_OUTPUT_DIR||'out','app');
-createServer((q,s)=>{try{const name=decodeURIComponent(new URL(q.url||'/', 'http://localhost').pathname);const file=resolve(root,'.'+(name==='/'?'/index.html':name));if(!file.startsWith(root+'/'))throw Error('path');s.setHeader('Content-Type',({'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.json':'application/json'})[extname(file)]||'application/octet-stream');s.setHeader('Cache-Control','no-store');s.end(readFileSync(file))}catch{s.writeHead(404);s.end('Not found')}}).listen(8081,'127.0.0.1',()=>console.log('Serving 127.0.0.1:8081'));
+import http from 'node:http';
+import {readFile} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import {resolve,extname,sep} from 'node:path';
+const base=fileURLToPath(new URL('.',import.meta.url));
+const root=resolve(base,process.argv[2]||'app');
+const types={'.html':'text/html','.js':'text/javascript','.json':'application/json','.jpg':'image/jpeg'};
+http.createServer(async(req,res)=>{try{const path=resolve(root,'.'+decodeURIComponent(new URL(req.url,'http://localhost').pathname).replace(/\/$/,'/index.html'));if(!path.startsWith(root+sep))throw Error();const body=await readFile(path);res.writeHead(200,{'Content-Type':types[extname(path)]||'application/octet-stream','Cache-Control':'no-store'});res.end(body)}catch{res.writeHead(404);res.end('Not found')}}).listen(8081,'127.0.0.1',()=>console.log('Serving '+root));

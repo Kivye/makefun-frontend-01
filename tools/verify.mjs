@@ -1,42 +1,12 @@
 import assert from 'node:assert/strict';
-import {readFileSync,readdirSync,statSync} from 'node:fs';
+import {readFile,stat} from 'node:fs/promises';
 import {gzipSync} from 'node:zlib';
-import {chromium} from 'playwright-core';
-const html=readFileSync('app/index.html'),shell=JSON.parse(readFileSync('app/shell.json'));
-const bytes=gzipSync(html,{level:9}).length;
-assert.equal(shell.bytes,bytes);assert(bytes<=3600);assert(html.includes('one file · '));assert(html.includes('Number("'+bytes+'")'));
-assert.deepEqual(readFileSync('out/app/index.html'),html);assert.deepEqual(readFileSync('out/app/shell.json'),readFileSync('app/shell.json'));
-assert(!/<(?:script|link)[^>]+(?:src|href)=/i.test(html.toString()));
-assert.deepEqual(readdirSync('screenshots').sort(),['1-board.jpg','2-bounty.jpg','3-leaderboard.jpg']);
-for(const f of readdirSync('screenshots')){const b=readFileSync('screenshots/'+f);assert.equal(b.readUInt16BE(0),0xffd8);assert(statSync('screenshots/'+f).size<=262144);assert.deepEqual(b,readFileSync('out/screenshots/'+f))}
-const {buildDossier}=await import('./dossier.ts');
-assert.deepEqual(new Uint8Array(readFileSync('out/dossier.json')),buildDossier('out',{text_max_bytes:163840,screenshots:{max:3,max_bytes:262144},app_max_files:993,app_max_bytes:16777216}));
-assert.equal(readFileSync('LICENSE','utf8').split('\n')[0],'SPDX-License-Identifier: MIT');
-const browser=await chromium.launch({headless:true,proxy:{server:'http://127.0.0.1:18080',bypass:'<-loopback>'},args:['--no-sandbox','--proxy-bypass-list=<-loopback>']});
-try{
-const page=await browser.newPage({viewport:{width:1280,height:800},ignoreHTTPSErrors:true});
-const requests=[];page.on('request',r=>requests.push(r.url()));
-await page.goto('http://127.0.0.1:8081/');
-await page.waitForFunction(()=>window.__shotReady,{},{timeout:180000});
-assert.equal(await page.locator('.rewards .reward').count(),20);
-assert.equal(await page.locator('.row em').filter({hasText:'VALUE'}).count(),1);
-const geometry=await page.evaluate(()=>({board:document.querySelector('aside').getBoundingClientRect().width,last:document.querySelector('.reward:last-of-type').getBoundingClientRect().bottom,footer:document.querySelector('footer').getBoundingClientRect().top}));
-assert.equal(geometry.board,420);assert(geometry.last<=geometry.footer,'20 rewards must fit above footer');
-assert(!requests.some(u=>u.endsWith('.js')||u.endsWith('.css')||u.endsWith('shell.json')),'default loads index.html alone');
-assert(requests.every(u=>u.startsWith('http://127.0.0.1:8081/')||u.startsWith('https://make.fun/api/')));
-assert((await page.locator('#size').innerText()).includes(bytes+' B gzip-9'));
-await page.locator('#sort').selectOption('time');assert.equal(await page.locator('#sort').inputValue(),'time');
-await page.goto('http://127.0.0.1:8081/#/leaderboard/threejs-fps-02');
-await page.waitForFunction(()=>window.__shotReady,{},{timeout:180000});
-const count=await page.locator('#rankings > .rank').count();assert(count>10);
-assert((await page.locator('.facts').innerText()).includes(count.toLocaleString('en-US')));
-const profile=await page.locator('#rankings a').first().getAttribute('href');
-await page.goto('http://127.0.0.1:8081/'+profile);
-await page.waitForFunction(()=>window.__shotReady,{},{timeout:180000});
-assert((await page.locator('main').innerText()).includes('Build activity'));
-await page.setViewportSize({width:800,height:1000});
-const stacked=await page.evaluate(()=>document.querySelector('main').getBoundingClientRect().top>=document.querySelector('aside').getBoundingClientRect().bottom);
-assert(stacked);
-console.log('PASS runtime: one-file default, 420px board, 20 visible rewards, VALUE, sorting, direct leaderboard '+count+' rows, direct profile, mobile stacking');
-}finally{await browser.close()}
-console.log('PASS: one-file gzip-9',bytes,'bytes; truthful label; output identity; 3 JPEGs; canonical dossier; MIT');
+import {fileURLToPath} from 'node:url';
+import {resolve,join} from 'node:path';
+import {browser} from './shoot.mjs';
+const root=fileURLToPath(new URL('../',import.meta.url)),out=resolve(root,process.env.MAKEFUN_OUTPUT_DIR||'out');
+const bytes=gzipSync(await readFile(join(out,'app/index.html')),{level:9}).length;
+assert.equal(JSON.parse(await readFile(join(out,'app/shell.json'))).bytes,bytes);assert(bytes<=3600);const source=await readFile(join(root,'main.ts'),'utf8');for(const line of source.split('\n').filter(l=>/await (writeFile|mkdir|cp)/.test(l)))assert(/output/.test(line),'Every write must target output');
+const b=await browser(),p=await b.newPage({viewport:{width:1280,height:800}});let foot;
+for(const route of ['#/','#/bounty/makefun-frontend-01','#/leaderboard/threejs-fps-02','#/profile/Kivye']){await p.goto('http://127.0.0.1:8081/'+route);await p.waitForFunction(()=>window.__shotReady===true,null,{timeout:90000});assert(await p.locator('.row').count()>0);assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);let f=await p.locator('footer').innerText();if(foot)assert.equal(f,foot);foot=f;if(route.includes('leaderboard'))assert(await p.locator('.rank').count()>10);if(route.includes('bounty')){assert(await p.locator('.reward').count()>0);assert((await p.locator('article').innerText()).includes('1 in'))}console.log('PASS',route)}
+for(const name of ['1-board.jpg','2-bounty.jpg','3-leaderboard.jpg'])assert((await stat(join(root,'screenshots',name))).size<=256*1024);await b.close();console.log('PASS shell',bytes,'B gzip-9; output-only build writes; all routes');

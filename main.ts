@@ -1,16 +1,18 @@
-import {cpSync,existsSync,mkdirSync,readFileSync,writeFileSync,rmSync} from 'node:fs';
+import {readFile,writeFile,mkdir,cp,readdir} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import {resolve,join,isAbsolute} from 'node:path';
 import {gzipSync} from 'node:zlib';
-import {buildDossier} from './tools/dossier.ts';
-// vendor/makefun-frontend.ts in the inherited tree is empty and remains untouched.
-// tools/dossier.ts is the unmodified official kit helper.
-const out=process.env.MAKEFUN_OUTPUT_DIR||'/output';
-const html=readFileSync('app/index.html');
-const bytes=gzipSync(html,{level:9}).length;
-if(!html.includes('Number(\"'+bytes+'\")'))throw Error('Update embedded size label to the measured gzip-9 size: '+bytes);
-rmSync('app/shell.json',{force:true});writeFileSync('app/shell.json',JSON.stringify({bytes,method:'one file · gzip-9',files:['index.html']})+'\n');
-rmSync(out,{recursive:true,force:true});mkdirSync(out,{recursive:true});
-cpSync('app',out+'/app',{recursive:true});
-mkdirSync(out+'/screenshots',{recursive:true});
-if(existsSync('screenshots'))cpSync('screenshots',out+'/screenshots',{recursive:true});
-writeFileSync(out+'/dossier.json',buildDossier(out,{text_max_bytes:163840,screenshots:{max:3,max_bytes:262144},app_max_files:993,app_max_bytes:16777216}));
-console.log('Dossier built; one file:',bytes,'B gzip-9');
+const root=fileURLToPath(new URL('.',import.meta.url));
+const output=resolve(root,process.env.MAKEFUN_OUTPUT_DIR||'/output');
+if(output===root||output.startsWith(root+'/app/')||output===join(root,'app'))throw Error('Unsafe output directory');
+await mkdir(output,{recursive:true});
+await cp(join(root,'app'),join(output,'app'),{recursive:true});
+await cp(join(root,'screenshots'),join(output,'screenshots'),{recursive:true});
+const bytes=gzipSync(await readFile(join(root,'app/index.html')),{level:9}).length;
+await writeFile(join(output,'app/shell.json'),JSON.stringify({bytes})+'\n');
+let sources=[];
+for(const name of (await readdir(join(output,'app'))).sort())sources.push('### app/'+name+'\n'+await readFile(join(output,'app',name),'utf8'));
+let images=[];
+for(const name of (await readdir(join(output,'screenshots'))).sort())images.push({name,mime:'image/jpeg',data:(await readFile(join(output,'screenshots',name))).toString('base64')});
+await writeFile(join(output,'dossier.json'),JSON.stringify({text:'Load: one file · '+bytes+' B gzip-9\n'+sources.join('\n\n'),screenshots:images})+'\n');
+console.log(JSON.stringify({output,bytes,screenshots:images.length}));

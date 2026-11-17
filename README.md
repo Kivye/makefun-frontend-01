@@ -2,12 +2,12 @@
 [![rank](https://make.fun/badge/makefun-frontend-01/Kivye/makefun-frontend-01/rank.svg)](https://make.fun/bounty/makefun-frontend-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=makefun-frontend-01)
 [![reward](https://make.fun/badge/makefun-frontend-01/Kivye/makefun-frontend-01/reward.svg)](https://make.fun/bounty/makefun-frontend-01?utm_source=github&utm_medium=readme&utm_campaign=makefun-frontend-01)
 
-Bounty desk v7 is a read-only make.fun client: one-file initial split view, live field odds, complete rankings and public builder profiles. [Competition](https://make.fun/bounty/makefun-frontend-01).
+A compact bounty desk with a persistent board, live field odds, every paid place, complete rankings and builder activity. Default-view CSS and JavaScript live entirely in index.html. Additional routes load detail.js on demand.
 
-Run `MAKEFUN_OUTPUT_DIR=out node main.ts` with Node 22.21, then `node serve.ts`. The static site is `out/app/`. Run `node tools/fwdproxy.mjs` and `node tools/shoot.mjs` for the three live captures; then build again and run `node tools/verify.mjs`.
+Bounty: https://make.fun/bounty/makefun-frontend-01
 
-The 420px board persists beside details and stacks below 900px. Best odds orders open bounties by rounded entries per paid place. VALUE marks one best open field. This count ratio is not a probability of winning; pot per entry divides the live pot by submissions, not distinct people. Zero entries show no pot-per-entry estimate.
+Build with Node 22: `MAKEFUN_OUTPUT_DIR=out node main.ts`. Serve the result with `node serve.ts out/app`. The output path is resolved from main.ts, independent of CWD. All build writes target the output directory, including the measured shell.json. No source files are generated.
 
-The first load has all CSS and JavaScript in index.html. Only profiles and rankings import detail.js. shell.json records index.html alone compressed at gzip level 9. The label is embedded in the HTML and independently checked. No fonts, accounts, writes or third-party assets.
+For browser checks, run tools/fwdproxy.mjs and tools/shoot.mjs with PLAYWRIGHT_MODULE set to an installed playwright-core. Screenshots use Chromium at 1280×800 and quality 82. Run tools/verify.mjs against the served output.
 
-The inherited vendor file is empty and is preserved untouched. tools/dossier.ts is the complete, unchanged official kit helper used to build the canonical dossier. MIT licensed.
+Field odds compare paid places to entries; they are descriptive counts, not a forecast. No account, transaction or API write is performed.

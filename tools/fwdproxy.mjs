@@ -1,14 +1,6 @@
 import http from 'node:http';
 import net from 'node:net';
-const upstream=new URL(process.env.HTTPS_PROXY||process.env.HTTP_PROXY);
-const server=http.createServer((req,res)=>{
- const u=new URL(req.url);const local=['127.0.0.1','localhost'].includes(u.hostname);
- const q=http.request({hostname:local?u.hostname:upstream.hostname,port:local?(u.port||80):upstream.port,path:local?u.pathname+u.search:req.url,method:req.method,headers:{...req.headers,host:u.host}},r=>{res.writeHead(r.statusCode,r.headers);r.pipe(res)});q.on('error',e=>{res.writeHead(502);res.end(e.message)});req.pipe(q);
-});
-server.on('connect',(req,client,head)=>{
- const socket=net.connect(Number(upstream.port)||80,upstream.hostname,()=>socket.write('CONNECT '+req.url+' HTTP/1.1\r\nHost: '+req.url+'\r\n\r\n'));
- let buffer=Buffer.alloc(0);
- const handshake=data=>{buffer=Buffer.concat([buffer,data]);const i=buffer.indexOf('\r\n\r\n');if(i<0)return;socket.off('data',handshake);if(!buffer.toString().startsWith('HTTP/1.1 200')&&!buffer.toString().startsWith('HTTP/1.0 200')){client.end(buffer);socket.destroy();return}client.write('HTTP/1.1 200 Connection Established\r\n\r\n');if(head.length)socket.write(head);const rest=buffer.subarray(i+4);if(rest.length)client.write(rest);socket.pipe(client);client.pipe(socket)};
- socket.on('data',handshake);socket.on('error',()=>client.destroy());client.on('error',()=>socket.destroy());client.on('close',()=>socket.destroy());
-});
-server.listen(18080,'127.0.0.1',()=>console.log('Forward proxy 127.0.0.1:18080 via HTTPS_PROXY'));
+import tls from 'node:tls';
+const upstream=process.env.HTTPS_PROXY||process.env.https_proxy;
+const server=http.createServer((req,res)=>{let u=new URL(req.url);let r=http.request({hostname:u.hostname,port:u.port||80,path:u.pathname+u.search,method:req.method,headers:req.headers},p=>{res.writeHead(p.statusCode,p.headers);p.pipe(res)});r.on('error',()=>{res.writeHead(502);res.end()});req.pipe(r)});
+server.on('connect',(req,client,head)=>{if(!upstream){let s=net.connect(req.url.split(':')[1]||443,req.url.split(':')[0],()=>{client.write('HTTP/1.1 200 Connection Established\r\n\r\n');s.write(head);client.pipe(s);s.pipe(client)});s.on('error',()=>client.destroy());return}let u=new URL(upstream),connect=u.protocol==='https:'?tls.connect:net.connect,s=connect({host:u.hostname,port:Number(u.port)||(u.protocol==='https:'?443:80)},()=>{s.write('CONNECT '+req.url+' HTTP/1.1\r\nHost: '+req.url+'\r\n'+(u.username?'Proxy-Authorization: Basic '+Buffer.from(decodeURIComponent(u.username)+':'+decodeURIComponent(u.password)).toString('base64')+'\r\n':'')+'\r\n')});let buf=Buffer.alloc(0);function handshake(d){buf=Buffer.concat([buf,d]);let i=buf.indexOf('\r\n\r\n');if(i<0)return;s.off('data',handshake);client.write(buf);s.write(head);client.pipe(s);s.pipe(client)}s.on('data',handshake);s.on('error',()=>client.destroy());client.on('error',()=>s.destroy())});server.listen(18080,'127.0.0.1',()=>console.log('Forward proxy ready'));
